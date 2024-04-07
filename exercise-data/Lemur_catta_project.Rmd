@@ -22,9 +22,10 @@ Here are the libraries needed for the scripts in this document to work properly.
                             #notes
 library(rgbif)              #for downloading datasets from gbif
 library(countrycode)        #for getting country names based on countryCode important
+library(sf)                 #for manipulating downloaded maps
+library(terra)              #for spatial data analysis
 library(rnaturalearth)      #for downloading maps
 library(rnaturalearthdata)  #vector data of maps
-library(sf)                 #for manipulating downloaded maps
 library(tidyverse)          #for tidy analysis
 library(CoordinateCleaner)  #for quality checking of occurrence data
 ```
