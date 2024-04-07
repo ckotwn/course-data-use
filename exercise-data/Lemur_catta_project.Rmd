@@ -12,7 +12,7 @@ output:
 
 # Synopsis
 
-This R Markdown document is developed to help users access GBIF data via R. Demonstrated here is a simple procedure of data downloading, data cleaning and plotting data for verification. Basic concepts of interacting with the GBIF APIs are introduced, as well as relevant readings are referenced. Comments are provided assuming this document is opened with RStudio.
+This R Markdown document is developed to help users access GBIF data via R. Demonstrated here is a simple procedure of data downloading, data cleaning and plotting data for verification. Basic concepts of interacting with the GBIF APIs are introduced, as well as relevant readings are referenced.
 
 # Prerequisites
 
@@ -92,7 +92,10 @@ gd_key <- occ_download(
 )
 ```
 
-Note that, on line 86, we only want data with coordinates, which are required for our plotting.
+Note that, on line 87, we only want data with coordinates, which are required for our plotting. But you can test run the block with the commented line and see some errors would appear in later steps.
+
+Once the download request is accepted, GBIF API will return a message with a download ID, which is then stored in gd_key.
+
 
 ### Actually downloading the file
 
@@ -102,8 +105,7 @@ The download may take some time to prepare depending on the size. So it's always
 occ_download_wait(gd_key)
 
 gd <- occ_download_get(gd_key, overwrite = TRUE) %>% 
-  occ_download_import() %>% 
-  setNames(tolower(names(.)))
+  occ_download_import()
 
 head(gd, 10) # view first ten rows
 ```
@@ -124,8 +126,8 @@ print(gbif_citation(occ_download_meta(gd_key))$download)
 ggplot() +
   geom_sf(data = world_map) +
   geom_point(data = gd,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "red") +
   theme_bw()
@@ -140,20 +142,20 @@ Also, we have a warning saying that some hundred rows of records contain missing
 The following code block filters away records without decimallatitude or decimallongitude, then store the result as a new data frame `gdf`.
 
 ```{r}
-gdf <- gd %>% filter(!is.na(decimallatitude), !is.na(decimallongitude))
+gdf <- gd %>% filter(!is.na(decimalLatitude), !is.na(decimalLongitude))
 ```
 
 We will from now on use `gdf` for our plotting. Let's get back to the previous map and look at countries that have our data points.
 
 ```{r}
-table(gdf$countrycode)
+table(gdf$countryCode)
 ```
 
 It appears that many records have coordinates outside Madagascar. Let's also have a look at the nature of these records.
 
 ```{r}
-gdf %>% distinct(basisofrecord)
-gdf %>% distinct(establishmentmeans)
+gdf %>% distinct(basisOfRecord)
+gdf %>% distinct(establishmentMeans)
 ```
 
 There are 5 distinct values for [DwC:basisOfRecord](https://dwc.tdwg.org/terms/#dwc:basisOfRecord). We also looked at [dwc:establishmentMeans](https://dwc.tdwg.org/list/#dwc_establishmentMeans), where only `NATIVE` is noted for some records.
@@ -171,7 +173,7 @@ We would like to evaluate observations and collections, so `FOSSIL_SPECIMEN` and
 ```{r}
 clean_step1 <- gdf %>% 
   as_tibble() %>% 
-  filter(!basisofrecord %in% c("FOSSIL_SPECIMEN", "MATERIAL_SAMPLE"))
+  filter(!basisOfRecord %in% c("FOSSIL_SPECIMEN", "MATERIAL_SAMPLE"))
 
 print(paste0(nrow(gdf)-nrow(clean_step1), " records deleted; ",
              nrow(clean_step1), " records remaining."))
@@ -185,13 +187,13 @@ We can use geom_point() multiple times to stack markers from different data fram
 ggplot() +
   geom_sf(data = world_map) +
   geom_point(data = gdf,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "black") +  
   geom_point(data = clean_step1,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "red") +
   theme_bw()
@@ -203,9 +205,9 @@ Flagging records with problematic occurrence information using functions of the 
 
 ```{r, message = FALSE}
 clean_step2 <- clean_step1 %>% 
-  filter(!is.na(decimallatitude),
-         !is.na(decimallongitude),
-         countrycode == "MG") %>% # "MG" is the ISO 3166-1 alpha-2 code for Madagascar
+  filter(!is.na(decimalLatitude),
+         !is.na(decimalLongitude),
+         countryCode == "MG") %>% # "MG" is the ISO 3166-1 alpha-2 code for Madagascar
   cc_dupl() %>% # Identify duplicated records
   cc_zero() %>% # Identify zero coordinates
   cc_equ() %>% # Identify records with identical lat/lon
@@ -226,13 +228,13 @@ print(paste0(nrow(gdf)-nrow(clean_step2), " records deleted; ",
 ggplot() +
   geom_sf(data = world_map) +
   geom_point(data = gdf,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "black") +  
   geom_point(data = clean_step2,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "red") +
   theme_bw()
@@ -248,13 +250,13 @@ With `cord_sf()`, we can zoom in to show markers in Madagascar.
 ggplot() +
   geom_sf(data = country_map) +
   geom_point(data = gdf,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "black") +  
   geom_point(data = clean_step2,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "red") +
   coord_sf(xlim = st_bbox(country_map)[c(1,3)],
@@ -268,10 +270,10 @@ We would like to further remove records with coordinate uncertainty and precisio
 
 ```{r}
 clean_step3 <- clean_step2 %>% 
-  filter(is.na(coordinateuncertaintyinmeters) |
-           coordinateuncertaintyinmeters < 10000,
-         is.na(coordinateprecision) |
-           coordinateprecision > 0.01)
+  filter(is.na(coordinateUncertaintyInMeters) |
+           coordinateUncertaintyInMeters < 10000,
+         is.na(coordinatePrecision) |
+           coordinatePrecision > 0.01)
 
 print(paste0(nrow(gdf)-nrow(clean_step3), " records deleted; ",
              nrow(clean_step3), " records remaining." ))  
@@ -285,13 +287,13 @@ We only have 14 records left, as shown in the following plot.
 ggplot() +
   geom_sf(data = country_map) +
   geom_point(data = gdf,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "black") +  
   geom_point(data = clean_step3,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "red") +
   coord_sf(xlim = st_bbox(country_map)[c(1,3)],
@@ -318,14 +320,14 @@ As a result, we have only three records after applying this filter. See the next
 ```{r}
 ggplot() +
   geom_sf(data = country_map) +
-  geom_point(data = gbif_download,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+  geom_point(data = gdf,
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "black") +  
   geom_point(data = clean_step4,
-             aes(x = decimallongitude,
-                 y = decimallatitude),
+             aes(x = decimalLongitude,
+                 y = decimalLatitude),
              shape = "+",
              color = "red") +
   coord_sf(xlim = st_bbox(country_map)[c(1,3)],
